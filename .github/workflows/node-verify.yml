@@ -1,0 +1,47 @@
+name: Node Verify
+
+on:
+  workflow_call:
+    inputs:
+      node-versions:
+        description: JSON array of Node.js versions to run the matrix against
+        type: string
+        default: '["24", "26"]'
+      install-command:
+        description: Command used to install dependencies
+        type: string
+        default: npm ci
+      pre-verify:
+        description: Optional command run before `npm run verify`
+        type: string
+        default: ''
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJSON(inputs.node-versions) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Pre-verify
+        if: inputs.pre-verify != ''
+        run: ${{ inputs.pre-verify }}
+
+      - name: Verify
+        run: npm run verify
